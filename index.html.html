@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Shipping Cost Estimator</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fb; padding: 20px; color: #333; }
+        .card { max-width: 480px; margin: 0 auto 20px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; color: #1a1a1a; font-size: 20px; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 14px; color: #4a5568; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        input:focus { border-color: #2563eb; outline: none; }
+        .row { display: flex; gap: 10px; }
+        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #1d4ed8; }
+        .result { margin-top: 20px; padding: 15px; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; display: none; }
+        .result h3 { margin: 0 0 15px 0; color: #1e293b; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .courier-list { display: flex; flex-direction: column; gap: 10px; }
+        .courier-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .courier-name { font-weight: 600; color: #334155; }
+        .courier-price { font-weight: 700; color: #16a34a; font-size: 18px; }
+        .legal-box { margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 12px; font-size: 11px; color: #64748b; line-height: 1.5; }
+        .alert-note { color: #dc2626; font-weight: 600; margin-bottom: 8px; }
+        
+        /* WhatsApp Box Styling */
+        .template-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .template-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .template-title { font-weight: bold; font-size: 14px; color: #1e293b; }
+        .copy-btn { background: #10b981; color: white; padding: 6px 12px; font-size: 12px; border-radius: 4px; font-weight: normal; margin-top: 0; width: auto; }
+        .copy-btn:hover { background: #059669; }
+        .template-text { background: white; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; font-size: 13px; white-space: pre-wrap; color: #475569; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>📦 Live Parcel Cost Estimator</h2>
+    
+    <div class="form-group">
+        <label>Receiver Destination Postcode (5 digits)*</label>
+        <input type="number" id="postcode" placeholder="e.g. 80000">
+    </div>
+    
+    <div class="form-group">
+        <label>Actual Weight WITH Packaging (kg)*</label>
+        <input type="number" id="weight" step="0.01" placeholder="e.g. 1.50">
+    </div>
+
+    <div class="form-group">
+        <label>Packaging Size / Dimensions (cm)*</label>
+        <div class="row">
+            <input type="number" id="length" placeholder="Length">
+            <input type="number" id="width" placeholder="Width">
+            <input type="number" id="height" placeholder="Height">
+        </div>
+    </div>
+
+    <button type="button" onclick="calculateTieredRates()">Check Estimated Rates</button>
+
+    <div id="resultBox" class="result">
+        <h3>Estimated EasyParcel Rates Available:</h3>
+        <div class="courier-list" id="courierList">
+            </div>
+        
+        <div class="legal-box">
+            <div class="alert-note">⚠️ Note: If a parcel fails to deliver, it will be returned to sender with return shipping costs incurred.</div>
+            <div>* All rates quoted are estimated net rates inclusive of shipping fees & taxes. It does not include variable courier surcharges (e.g., address correction, out-of-service area, or return charges).</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>💬 WhatsApp Message Templates</h2>
+    
+    <div class="template-box">
+        <div class="template-header">
+            <span class="template-title">1. Before Quoting (Ask Postcode)</span>
+            <button class="copy-btn" onclick="copyText('text1')">Copy Text</button>
+        </div>
+        <div class="template-text" id="text1">Hi there! Could you please share your postcode so we can check the estimated shipping fee for your parcel? Thank you! 😊</div>
+    </div>
+
+    <div class="template-box">
+        <div class="template-header">
+            <span class="template-title">2. After Quoting (Auto-Highest Fee)</span>
+            <button class="copy-btn" onclick="copyText('text2')">Copy Text</button>
+        </div>
+        <div class="template-text" id="text2">The estimated delivery cost for your order will be around RM [Run calculation first].
+
+Please note: This is an estimated rate. The final shipping cost may vary slightly depending on the exact courier system assessment upon final packing, and we reserve the right to adjust the final fee if required. Thank you for your understanding! 🙏</div>
+    </div>
+
+    <div class="template-box">
+        <div class="template-header">
+            <span class="template-title">3. Confirming Order (Ask Details & T&C)</span>
+            <button class="copy-btn" onclick="copyText('text3')">Copy Text</button>
+        </div>
+        <div class="template-text" id="text3">Great! To proceed with your delivery setup, please reply with the shipping details in this exact format:
+
+Receiver Name:
+Receiver Full Address with Postcode:
+Receiver Contact Phone Number:
+
+⚠️ Remark / Shipping T&C:
+1. Please ensure the receiver contact number is accurate and reachable, as the courier service will contact you upon delivery.
+2. In the event that a delivery fails due to incorrect details, no answer, or refusal, the courier company will return the package to the sender. The buyer will be fully responsible for covering all return shipping charges and re-delivery costs incurred. We reserve the right to hold the shipment until payment is cleared. Thank you!</div>
+    </div>
+</div>
+
+<script>
+let maxEstimatedPrice = 0;
+
+function calculateTieredRates() {
+    const postcodeRaw = document.getElementById('postcode').value;
+    const weightRaw = document.getElementById('weight').value;
+    const lengthRaw = document.getElementById('length').value;
+    const widthRaw = document.getElementById('width').value;
+    const heightRaw = document.getElementById('height').value;
+
+    if (!postcodeRaw || !weightRaw || !lengthRaw || !widthRaw || !heightRaw) {
+        alert("Please fill up all input fields first!");
+        return;
+    }
+
+    const postcode = postcodeRaw.trim();
+    const actualWeight = parseFloat(weightRaw);
+    const l = parseFloat(lengthRaw);
+    const w = parseFloat(widthRaw);
+    const h = parseFloat(heightRaw);
+
+    const sumDim = l + w + h;
+    const maxSide = Math.max(l, w, h);
+    const isEastMalaysia = (postcode.startsWith('9') || postcode.startsWith('87'));
+    
+    const taxBuffer = 1.15; // 15% added layer safety markup
+    let courierHtml = '';
+    let priceList = [];
+
+    // Master pricing engine structure per courier rules
+    function getTieredPrice(chargedWt, baseWM, nextWM, baseEM, nextEM) {
+        let basePrice = 0;
+        if (!isEastMalaysia) {
+            basePrice = chargedWt <= 1 ? baseWM : baseWM + (chargedWt - 1) * nextWM;
+        } else {
+            basePrice = chargedWt <= 1 ? baseEM : baseEM + (chargedWt - 1) * nextEM;
+        }
+        return basePrice * taxBuffer;
+    }
+
+    let vw5000 = (l * w * h) / 5000;
+    let vw6000 = (l * w * h) / 6000;
+
+    // 1. J&T Express (Economy Base Profile)
+    let jntWeight = (maxSide > 30) ? Math.max(actualWeight, vw6000) : actualWeight;
+    let jntCharged = Math.ceil(jntWeight * 2) / 2;
+    if (jntCharged <= 30 && maxSide <= 150 && sumDim <= 300) {
+        let p = getTieredPrice(jntCharged, 5.90, 1.50, 15.00, 13.00);
+        priceList.push(p); courierHtml += createCourierRow("J&T Express", p);
+    }
+
+    // 2. SPX Express (Standard Base Profile)
+    let spxCharged = Math.ceil(Math.max(actualWeight, vw5000) * 2) / 2;
+    if (spxCharged <= 30 && maxSide <= 125) {
+        let p = getTieredPrice(spxCharged, 5.80, 1.50, 14.50, 12.50);
+        priceList.push(p); courierHtml += createCourierRow("SPX Express", p);
+    }
+
+    // 3. DHLeC (Mid Tier Profile)
+    let dhlCharged = Math.ceil(Math.max(actualWeight, vw5000) * 2) / 2;
+    if (dhlCharged <= 30 && sumDim <= 250 && l <= 150 && w <= 100 && h <= 100) {
+        let p = getTieredPrice(dhlCharged, 6.40, 1.60, 16.00, 13.50);
+        priceList.push(p); courierHtml += createCourierRow("DHLeC", p);
+    }
+
+    // 4. City-Link Express (Premium Profile)
+    let cityLinkCharged = Math.ceil(Math.max(actualWeight, vw5000) * 2) / 2;
+    if (cityLinkCharged <= 40 && sumDim <= 450) {
+        let p = getTieredPrice(cityLinkCharged, 6.80, 1.80, 17.50, 14.00);
+        priceList.push(p); courierHtml += createCourierRow("City-Link Express", p);
+    }
+
+    // 5. PosLaju (Highest Safety Profile)
+    let poslajuCharged = Math.ceil(Math.max(actualWeight, vw5000) * 2) / 2;
+    if (poslajuCharged <= 30 && maxSide <= 200 && sumDim <= 300) {
+        let p = getTieredPrice(poslajuCharged, 7.50, 2.20, 19.00, 15.50);
+        priceList.push(p); courierHtml += createCourierRow("PosLaju", p);
+    }
+
+    if (courierHtml === '') {
+        courierHtml = '<div style="text-align:center; color:#ef4444; font-size:14px; padding:10px;">Package dimensions or weight exceed courier restrictions.</div>';
+        document.getElementById('text2').innerText = "The estimated delivery cost for your order will be around RM [Error: Size Limit Exceeded].\n\nPlease note: This is an estimated rate...";
+    } else {
+        maxEstimatedPrice = Math.max(...priceList);
+        document.getElementById('text2').innerText = `The estimated delivery cost for your order will be around RM ${maxEstimatedPrice.toFixed(2)}.
+
+Please note: This is an estimated rate. The final shipping cost may vary slightly depending on the exact courier system assessment upon final packing, and we reserve the right to adjust the final fee if required. Thank you for your understanding! 🙏`;
+    }
+
+    document.getElementById('courierList').innerHTML = courierHtml;
+    document.getElementById('resultBox').style.display = 'block';
+}
+
+function createCourierRow(name, price) {
+    return `
+        <div class="courier-item">
+            <div class="courier-name">${name}</div>
+            <div class="courier-price">RM ${price.toFixed(2)}</div>
+        </div>
+    `;
+}
+
+function copyText(elementId) {
+    const text = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Text copied successfully!");
+    }).catch(err => {
+        alert("Failed to copy text automatically.");
+    });
+}
+</script>
+
+</body>
+</html>
